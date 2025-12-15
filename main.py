@@ -1,7 +1,7 @@
 import time
 import os
 from dotenv import load_dotenv  
-from repository import JsonRepository
+from repository_mysql import MySqlRepository
 from service import TrackerService
 
 load_dotenv()
@@ -19,19 +19,19 @@ def main():
         print("❌ ERRO: Usuário alvo não definido no arquivo .env")
         return
 
-    print(f"🔒 Iniciando monitoramento seguro para: {TARGET_USER}")
+    print(f"🔒 Iniciando monitoramento seguro para: {os.getenv('TARGET_USER')}")
+    print("🗄️  Conectando ao MySQL...")
     
-    repo = JsonRepository()
-    service = TrackerService(APIFY_TOKEN, repo)
+    repo = MySqlRepository() 
+    
+    service = TrackerService(os.getenv("APIFY_TOKEN"), repo)
 
-    while True:
-        try:
-            service.check_and_notify(TARGET_USER)
-        except Exception as e:
-            print(f"⚠️ Erro na execução: {e}")
+    try:
+        service.check_and_notify(os.getenv("TARGET_USER"))
+    except Exception as e:
+        print(f"⚠️ Erro na execução: {e}")
         
-        print("⏳ Aguardando 15 minutos...")
-        time.sleep(900) 
+    print("✅ Execução de teste finalizada. Verifique seu banco de dados MySQL.")
 
 if __name__ == "__main__":
     main()
