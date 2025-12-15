@@ -1,37 +1,39 @@
 import time
 import os
-from dotenv import load_dotenv  
+from dotenv import load_dotenv
 from repository_mysql import MySqlRepository
 from service import TrackerService
+from notification import TelegramNotifier
 
 load_dotenv()
 
-APIFY_TOKEN = os.getenv("APIFY_TOKEN")
-TARGET_USER = os.getenv("TARGET_USER")
-
 def main():
-
-    if not APIFY_TOKEN:
-        print("❌ ERRO CRÍTICO: Token do Apify não encontrado no arquivo .env")
-        return
+    notifier = TelegramNotifier(
+        token=os.getenv("TELEGRAM_BOT_TOKEN"), 
+        chat_id=os.getenv("TELEGRAM_CHAT_ID")
+    )
     
-    if not TARGET_USER:
-        print("❌ ERRO: Usuário alvo não definido no arquivo .env")
-        return
-
-    print(f"🔒 Iniciando monitoramento seguro para: {os.getenv('TARGET_USER')}")
-    print("🗄️  Conectando ao MySQL...")
+    repo = MySqlRepository()
     
-    repo = MySqlRepository() 
-    
-    service = TrackerService(os.getenv("APIFY_TOKEN"), repo)
+    service = TrackerService(
+        api_token=os.getenv("APIFY_TOKEN"), 
+        repository=repo,
+        notifier=notifier
+    )
 
-    try:
-        service.check_and_notify(os.getenv("TARGET_USER"))
-    except Exception as e:
-        print(f"⚠️ Erro na execução: {e}")
+    target_user = os.getenv("TARGET_USER")
+    print(f"🔒 Iniciando monitoramento para: {target_user}")
+
+    while True:
+        try:
+            service.check_and_notify(target_user)
+            print("✅ Verificação concluída com sucesso.")
+        except Exception as e:
+            error_msg = f"⚠️ Erro na execução: {str(e)}"
+            print(error_msg)
+            notifier.send(error_msg)
         
-    print("✅ Execução de teste finalizada. Verifique seu banco de dados MySQL.")
+        time.sleep(1800)
 
 if __name__ == "__main__":
     main()
