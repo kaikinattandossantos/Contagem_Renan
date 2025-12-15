@@ -22,11 +22,20 @@ class MySqlRepository:
         return None
 
     def save_profile(self, model: InstagramProfileModel):
-        query = """
-        INSERT INTO profiles (username, follower_count) 
-        VALUES (%s, %s)
-        ON DUPLICATE KEY UPDATE follower_count = VALUES(follower_count)
-        """
-        self.cursor.execute(query, (model.username, model.follower_count))
-        self.conn.commit()
+            # 1. Atualiza o estado atual (como já fazia)
+            query_update = """
+            INSERT INTO profiles (username, follower_count) 
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE follower_count = VALUES(follower_count)
+            """
+            self.cursor.execute(query_update, (model.username, model.follower_count))
+            
+            # 2. NOVO: Salva no histórico para o gráfico
+            query_history = """
+            INSERT INTO profile_history (username, follower_count)
+            VALUES (%s, %s)
+            """
+            self.cursor.execute(query_history, (model.username, model.follower_count))
+            
+            self.conn.commit()
     
