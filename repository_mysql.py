@@ -5,13 +5,14 @@ from datetime import datetime
 
 class MySqlRepository:
     def __init__(self):
-        self.conn = mysql.connector.connect(
-            host=os.getenv("DB_HOST"),
-            user=os.getenv("DB_USER"),
-            password=os.getenv("DB_PASS"),
-            database=os.getenv("DB_NAME")
-        )
-        self.cursor = self.conn.cursor(dictionary=True)
+            self.conn = mysql.connector.connect(
+                host=os.getenv("DB_HOST"),
+                user=os.getenv("DB_USER"),
+                password=os.getenv("DB_PASS"),
+                database=os.getenv("DB_NAME"),
+                port=os.getenv("DB_PORT") 
+            )
+            self.cursor = self.conn.cursor(dictionary=True)
 
     def get_profile(self, username: str):
         query = "SELECT username, follower_count FROM profiles WHERE username = %s"
