@@ -20,7 +20,8 @@ def get_db_connection():
         host=os.getenv("DB_HOST"),
         user=os.getenv("DB_USER"),
         password=os.getenv("DB_PASS"),
-        database=os.getenv("DB_NAME")
+        database=os.getenv("DB_NAME"),
+        port=os.getenv("DB_PORT")
     )
 
 @app.get("/dashboard/{username}")
@@ -29,7 +30,7 @@ def get_dashboard_data(username: str):
     try:
         cursor = conn.cursor(dictionary=True)
 
-        # 1. Dados atuais
+        # 1. Dados Atuais
         cursor.execute("SELECT follower_count FROM profiles WHERE username = %s", (username,))
         current = cursor.fetchone()
 
@@ -59,30 +60,30 @@ def get_dashboard_data(username: str):
                     "growth": growth
                 })
 
-        # 3. Posts Recentes (Eventos de Impacto)
+        # 3. Posts Recentes (Top News)
+        # Ajustado para bater com o Frontend
         query_posts = """
-        SELECT caption, likes_count, DATE_FORMAT(posted_at, '%d/%m') as date_formatted, url
+        SELECT caption, likes_count, comments_count, DATE_FORMAT(posted_at, '%d/%m') as date_formatted, url
         FROM posts 
         WHERE username = %s 
         ORDER BY posted_at DESC 
-        LIMIT 5
+        LIMIT 10
         """
         cursor.execute(query_posts, (username,))
         top_posts = cursor.fetchall()
 
         formatted_news = []
         for i, post in enumerate(top_posts):
-            # Limpa legenda para virar título
             raw_caption = post['caption'] if post['caption'] else "Post sem legenda"
             title = (raw_caption[:50] + '...') if len(raw_caption) > 50 else raw_caption
             
             formatted_news.append({
                 "id": i,
-                "title": title,
-                "date": post['date_formatted'],
-                "impact": post['likes_count'],
-                "description": raw_caption,
-                "url": post['url']
+                "title": title,               # Front usa .title
+                "date": post['date_formatted'], # Front usa .date
+                "impact": post['likes_count'],  # Front usa .impact (CORRIGIDO AQUI)
+                "description": raw_caption,     # Front usa .description
+                "url": post['url']            # Front usa .url
             })
 
         return {
@@ -97,3 +98,20 @@ def get_dashboard_data(username: str):
     finally:
         if conn.is_connected():
             conn.close()
+
+# Rota auxiliar para garantir que tabelas existam
+@app.get("/setup-banco")
+def setup_db():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    # Recria tabelas se não existirem
+    queries = [
+        "CREATE TABLE IF NOT EXISTS profiles (username VARCHAR(50) PRIMARY KEY, follower_count INT NOT NULL, last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS profile_history (id INT AUTO_INCREMENT PRIMARY KEY, username VARCHAR(50) NOT NULL, follower_count INT NOT NULL, recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)",
+        "CREATE TABLE IF NOT EXISTS posts (post_id VARCHAR(50) PRIMARY KEY, username VARCHAR(50), caption TEXT, likes_count INT, comments_count INT, posted_at TIMESTAMP, url VARCHAR(255), recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY (username) REFERENCES profiles(username))"
+    ]
+    for q in queries:
+        cursor.execute(q)
+    conn.commit()
+    conn.close()
+    return {"status": "Banco verificado"}
