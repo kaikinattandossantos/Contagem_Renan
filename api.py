@@ -35,14 +35,15 @@ def get_dashboard_data(username: str):
         current = cursor.fetchone()
 
         # 2. Histórico (Gráfico)
+
         query_history = """
         SELECT 
-            DATE_FORMAT(recorded_at, '%d/%m') as date, 
+            DATE_FORMAT(MAX(recorded_at), '%d/%m') as date, 
             MAX(follower_count) as followers
         FROM profile_history 
         WHERE username = %s 
         GROUP BY DATE(recorded_at) 
-        ORDER BY recorded_at ASC
+        ORDER BY MAX(recorded_at) ASC
         LIMIT 30
         """
         cursor.execute(query_history, (username,))
@@ -61,7 +62,6 @@ def get_dashboard_data(username: str):
                 })
 
         # 3. Posts Recentes (Top News)
-        # Ajustado para bater com o Frontend
         query_posts = """
         SELECT caption, likes_count, comments_count, DATE_FORMAT(posted_at, '%d/%m') as date_formatted, url
         FROM posts 
@@ -79,11 +79,11 @@ def get_dashboard_data(username: str):
             
             formatted_news.append({
                 "id": i,
-                "title": title,               # Front usa .title
+                "title": title,                 # Front usa .title
                 "date": post['date_formatted'], # Front usa .date
-                "impact": post['likes_count'],  # Front usa .impact (CORRIGIDO AQUI)
+                "impact": post['likes_count'],  # Front usa .impact (Likes)
                 "description": raw_caption,     # Front usa .description
-                "url": post['url']            # Front usa .url
+                "url": post['url']              # Front usa .url
             })
 
         return {
