@@ -48,7 +48,7 @@ class TrackerService:
             # Alerta de Viralização
             top_post = latest_posts[0]
             likes = top_post.get('likesCount', 0)
-            if likes > 10000: 
+            if likes > 40000: 
                  self.notifier.send(f"🔥 *POST VIRALIZANDO!* O último post do @{target_username} bateu {likes} likes!")
 
         # 3. NOTIFICAR CRESCIMENTO
