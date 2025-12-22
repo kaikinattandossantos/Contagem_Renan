@@ -85,18 +85,19 @@ class MySqlRepository:
     # O erro dava porque o main.py chamava estas funções e elas não existiam aqui.
 
     def get_daily_history(self, username):
-        query = """
-        SELECT 
-            DATE_FORMAT(recorded_at, '%d/%m') as date, 
-            MAX(follower_count) as followers
-        FROM profile_history 
-        WHERE username = %s 
-        GROUP BY DATE(recorded_at) 
-        ORDER BY MAX(recorded_at) ASC
-        LIMIT 30
-        """
-        self.cursor.execute(query, (username,))
-        return self.cursor.fetchall()
+            # CORREÇÃO: Adicionado MAX() dentro do DATE_FORMAT para satisfazer o only_full_group_by
+            query = """
+            SELECT 
+                DATE_FORMAT(MAX(recorded_at), '%d/%m') as date, 
+                MAX(follower_count) as followers
+            FROM profile_history 
+            WHERE username = %s 
+            GROUP BY DATE(recorded_at) 
+            ORDER BY MAX(recorded_at) ASC
+            LIMIT 30
+            """
+            self.cursor.execute(query, (username,))
+            return self.cursor.fetchall()
 
     def get_recent_posts(self, username):
         query = """
