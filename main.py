@@ -62,6 +62,8 @@ def startup_event():
 def home():
     return {"status": "online", "message": "System running."}
 
+
+
 @app.get("/dashboard/{username}")
 def get_dashboard_data(username: str):
     try:
