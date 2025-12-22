@@ -33,7 +33,9 @@ def job():
 def main():
     print("🚀 Sistema de Monitoramento Iniciado")
     
-    schedule.every(8).hours.do(job)
+    # schedule.every(8).hours.do(job)
+    print("⚠️ MODO DE TESTE ATIVO: Rodando a cada 1 minuto")
+    schedule.every(1).minutes.do(job)
     
 
     job() 
