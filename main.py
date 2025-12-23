@@ -6,12 +6,10 @@ import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
-from repository_mysql import MySqlRepository  # Certifique-se que o nome do arquivo é repository_mysql.py ou mude para model
+from repository_mysql import MySqlRepository 
 from service import TrackerService
 from notification import TelegramNotifier
 
-# Se o seu arquivo de repositório se chama 'model.py', mude a importação acima para:
-# from model import MySqlRepository
 
 load_dotenv()
 
@@ -28,10 +26,23 @@ app.add_middleware(
 def job():
     print(f"⏰ Executando Job: {time.strftime('%H:%M:%S')}")
     try:
+        # --- DEBUG: O CÓDIGO VAI CONFESSAR AGORA ---
+        env_token = os.getenv("TELEGRAM_BOT_TOKEN")
+        env_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+        
+        print(f"🕵️ DEBUG ENV TOKEN: {env_token[:5]}... (oculto)")
+        print(f"🕵️ DEBUG ENV CHAT_ID: '{env_chat_id}'") # As aspas mostram se tem espaço em branco
+        # -------------------------------------------
+
         notifier = TelegramNotifier(
-            token=os.getenv("TELEGRAM_BOT_TOKEN"), 
-            chat_id=os.getenv("TELEGRAM_CHAT_ID")
+            token=env_token, 
+            chat_id=env_chat_id
         )
+        
+        # Teste rápido: O ID dentro da classe bate com o do ENV?
+        if notifier.chat_id != env_chat_id:
+             print(f"❌ ERRO GRAVE: O Notifier recebeu '{notifier.chat_id}' mas o env era '{env_chat_id}'")
+
         repo = MySqlRepository()
         service = TrackerService(
             api_token=os.getenv("APIFY_TOKEN"), 
@@ -39,10 +50,11 @@ def job():
             notifier=notifier
         )
         
-        target_user = os.getenv("TARGET_USER") or "renansantosmbl" # Fallback de segurança
+        target_user = os.getenv("TARGET_USER") or "renansantosmbl"
         if target_user:
             service.check_and_notify(target_user)
             print("✅ Sucesso.")
+            
     except Exception as e:
         print(f"⚠️ Erro no Job: {e}")
 
@@ -53,10 +65,8 @@ def run_scheduler_loop():
 
 @app.on_event("startup")
 def startup_event():
-    # Roda a cada 4 horas (8 horas pode ser muito tempo para viralização)
     schedule.every(4).hours.do(job)
     
-    # Roda uma vez assim que liga para garantir que temos dados
     initial_check = threading.Thread(target=job)
     initial_check.start()
     
@@ -68,16 +78,13 @@ def startup_event():
 def home():
     return {"status": "online", "message": "QG Digital Running."}
 
-# --- 2. LÓGICA DA API (DASHBOARD) ---
-# Aqui estava o erro. Agora corrigido para usar os métodos do Repository.
+
 
 @app.get("/dashboard/{username}")
 def get_dashboard_data(username: str):
     try:
-        # Instancia o repositório
         repo = MySqlRepository()
         
-        # A. Busca Perfil
         profile_model = repo.get_profile(username)
         
         if not profile_model:
@@ -89,7 +96,6 @@ def get_dashboard_data(username: str):
             
         current_followers = profile_model.follower_count
         
-        # B. Busca Histórico (Gráfico)
         raw_history = repo.get_daily_history(username)
         processed_history = []
         
@@ -103,7 +109,6 @@ def get_dashboard_data(username: str):
                     "growth": item['followers'] - prev
                 })
 
-        # C. Busca Posts (Notícias)
         raw_posts = repo.get_recent_posts(username)
         formatted_news = []
         
