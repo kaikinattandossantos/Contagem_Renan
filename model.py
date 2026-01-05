@@ -11,7 +11,7 @@ class InstagramProfileModel:
     @property
     def current_milestone(self) -> int:
         # A lógica matemática do marco de 1k (Ex: 320300 -> 320)
-        return self.follower_count // 1000
+        return self.follower_count // 3000
     
     def to_dict(self):
         return {"username": self.username, "follower_count": self.follower_count}

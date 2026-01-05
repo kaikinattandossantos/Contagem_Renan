@@ -24,6 +24,7 @@ app.add_middleware(
 
 # --- 1. LÓGICA DO ROBÔ (SCHEDULER) ---
 def job():
+    print(f"🕵️ VERDADE NUA E CRUA: O chat_id carregado é '{env_chat_id}'")
     print(f"⏰ Executando Job: {time.strftime('%H:%M:%S')}")
     try:
         # --- DEBUG: O CÓDIGO VAI CONFESSAR AGORA ---
