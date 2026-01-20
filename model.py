@@ -13,6 +13,16 @@ class InstagramProfileModel:
     def current_milestone(self) -> int:
         return self.follower_count // 1000
 
+# --- YOUTUBE MODEL (Estrutura de Dados) ---
+class YouTubeChannelModel:
+    def __init__(self, handle: str, subscriber_count):
+        self.handle = handle.lstrip('@').strip()
+        self.subscriber_count = int(subscriber_count) if subscriber_count is not None else 0
+
+    @property
+    def current_milestone(self) -> int:
+        return self.subscriber_count // 1000
+
 # --- SEU REPOSITORY (Acesso ao Banco) ---
 class MySqlRepository:
     def __init__(self):
