@@ -9,9 +9,24 @@ from dotenv import load_dotenv
 from repository_mysql import MySqlRepository 
 from service import TrackerService
 from notification import TelegramNotifier
+from pathlib import Path
+from dotenv import load_dotenv
 
+# --- DIAGNÓSTICO FORÇADO DO .ENV ---
+current_dir = Path(__file__).parent.absolute()
+env_path = current_dir / ".env"
 
-load_dotenv()
+print(f"--- VERIFICAÇÃO DE AMBIENTE ---")
+print(f"📂 Pasta do script: {current_dir}")
+print(f"📄 Procurando .env em: {env_path}")
+
+if env_path.exists():
+    load_dotenv(dotenv_path=env_path)
+    print("✅ Ficheiro .env encontrado!")
+else:
+    print("❌ ERRO: Ficheiro .env NÃO ENCONTRADO!")
+    print("Certifique-se que o arquivo se chama exatamente '.env' e não '.env.txt'")
+print(f"-------------------------------")
 
 app = FastAPI()
 
@@ -23,41 +38,32 @@ app.add_middleware(
 )
 
 # --- 1. LÓGICA DO ROBÔ (SCHEDULER) ---
+# --- 1. LÓGICA DO ROBÔ (SCHEDULER) ---
 def job():
-    print(f"🕵️ VERDADE NUA E CRUA: O chat_id carregado é '{env_chat_id}'")
+    env_token = os.getenv("TELEGRAM_BOT_TOKEN")
+    env_chat_id = os.getenv("TELEGRAM_CHAT_ID")
+    
+    print(f"🕵️ DEBUG: O chat_id carregado é '{env_chat_id}'")
     print(f"⏰ Executando Job: {time.strftime('%H:%M:%S')}")
+    
     try:
-        # --- DEBUG: O CÓDIGO VAI CONFESSAR AGORA ---
-        env_token = os.getenv("TELEGRAM_BOT_TOKEN")
-        env_chat_id = os.getenv("TELEGRAM_CHAT_ID")
-        
-        print(f"🕵️ DEBUG ENV TOKEN: {env_token[:5]}... (oculto)")
-        print(f"🕵️ DEBUG ENV CHAT_ID: '{env_chat_id}'") # As aspas mostram se tem espaço em branco
-        # -------------------------------------------
-
-        notifier = TelegramNotifier(
-            token=env_token, 
-            chat_id=env_chat_id
-        )
-        
-        # Teste rápido: O ID dentro da classe bate com o do ENV?
-        if notifier.chat_id != env_chat_id:
-             print(f"❌ ERRO GRAVE: O Notifier recebeu '{notifier.chat_id}' mas o env era '{env_chat_id}'")
-
+        # 1. Configura o Repositório e o Notificador
         repo = MySqlRepository()
-        service = TrackerService(
-            api_token=os.getenv("APIFY_TOKEN"), 
-            repository=repo,
-            notifier=notifier
-        )
+        notifier = TelegramNotifier(env_token, env_chat_id)
         
-        target_user = os.getenv("TARGET_USER") or "renansantosmbl"
-        if target_user:
-            service.check_and_notify(target_user)
-            print("✅ Sucesso.")
-            
+        # 2. Pega o Token do Apify (certifique-se que o nome no .env é este)
+        apify_token = os.getenv("APIFY_API_TOKEN")
+
+        # 3. CRIA O SERVIÇO COM OS 3 ARGUMENTOS NA ORDEM CORRETA
+        # A sua classe [Imagem d6e9a0] pede: api_token, repository, notifier
+        service = TrackerService(apify_token, repo, notifier)
+        
+        # 4. Executa a tarefa
+        service.check_and_notify('renansantosmbl')
+        
     except Exception as e:
         print(f"⚠️ Erro no Job: {e}")
+
 
 def run_scheduler_loop():
     while True:
@@ -83,20 +89,21 @@ def home():
 
 @app.get("/dashboard/{username}")
 def get_dashboard_data(username: str):
+    repo = MySqlRepository()
     try:
-        repo = MySqlRepository()
+        # 1. Busca dados atuais do perfil
+        current = repo.get_profile(username)
         
-        profile_model = repo.get_profile(username)
-        
-        if not profile_model:
-            return {
-                "current_followers": 0,
-                "daily_data": [],
-                "top_news": []
-            }
-            
-        current_followers = profile_model.follower_count
-        
+        # --- AQUI ESTÁ A ALTERAÇÃO PRECISA ---
+        # Se 'current' for None (perfil não existe no banco), define como 0
+        if current is None:
+            current_followers = 0
+        else:
+            # Garante que follower_count seja um número
+            current_followers = current.follower_count if current.follower_count is not None else 0
+        # -------------------------------------
+
+        # 2. Histórico (Gráfico)
         raw_history = repo.get_daily_history(username)
         processed_history = []
         
@@ -137,6 +144,7 @@ def get_dashboard_data(username: str):
         return {"error": str(e)}
 
 if __name__ == "__main__":
+    job()
     port = int(os.getenv("PORT", 8080))
     print(f"🚀 Iniciando na porta {port}...")
     uvicorn.run("main:app", host="0.0.0.0", port=port, reload=False)

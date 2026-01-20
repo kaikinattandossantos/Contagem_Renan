@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Dashboard Instagram</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; background-color: #f4f4f4; }
+        .dashboard-container { width: 100%; max-width: 900px; margin: auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .metric-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+        .metric-table thead tr { background-color: #F7A600; }
+        .metric-table th { padding: 15px 10px; color: #222; font-weight: bold; text-align: right; }
+        .metric-table th:first-child, .metric-table td:first-child { text-align: left; width: 180px; padding-left: 20px; }
+        .metric-table td { padding: 15px 10px; border-bottom: 1px solid #eee; text-align: right; }
+        .col-data { width: 130px; }
+        .col-pct { width: 100px; }
+        .pos { color: #2e7d32; font-weight: bold; }
+        .neg { color: #c62828; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="dashboard-container">
+    <table class="metric-table">
+        <thead>
+            <tr>
+                <th>Rede Social</th>
+                <th class="col-data">Seguidores</th>
+                <th class="col-data">24h</th>
+                <th class="col-pct">Diário %</th>
+                <th class="col-pct">Semanal %</th>
+                <th class="col-pct">Mensal %</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td><strong>Instagram</strong></td>
+                <td id="inst-followers">--</td>
+                <td id="inst-24h">--</td>
+                <td id="inst-pct-24h">--</td>
+                <td id="inst-pct-7d">--</td>
+                <td id="inst-pct-30d">--</td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+async function carregarDados() {
+    const username = "renansantosmbl"; // Usuário definido no seu main.py
+    try {
+        // Conecta na porta 8080 configurada no seu main.py
+        const response = await fetch(`http://localhost:8080/dashboard/${username}`);
+        if (!response.ok) throw new Error("API Offline");
+        
+        const data = await response.json();
+
+        // 1. Atualiza Seguidores Totais
+        document.getElementById('inst-followers').innerText = data.current_followers.toLocaleString('pt-BR');
+
+        const history = data.daily_data;
+        if (history && history.length > 0) {
+            const current = data.current_followers;
+            const lastIndex = history.length - 1;
+
+            // --- CÁLCULO 24H ---
+            const growth24h = history[lastIndex].growth;
+            const el24h = document.getElementById('inst-24h');
+            el24h.innerText = (growth24h >= 0 ? "+" : "") + growth24h.toLocaleString('pt-BR');
+            el24h.className = growth24h >= 0 ? "pos" : "neg";
+
+            const pct24h = ((growth24h / (current - growth24h)) * 100).toFixed(2);
+            document.getElementById('inst-pct-24h').innerText = `${pct24h}%`;
+            document.getElementById('inst-pct-24h').className = growth24h >= 0 ? "pos" : "neg";
+
+            // --- CÁLCULO SEMANAL (7 dias ou o máximo disponível) ---
+            const weekIndex = Math.max(0, history.length - 7);
+            const followersWeekAgo = history[weekIndex].followers - history[weekIndex].growth;
+            const pct7d = (((current - followersWeekAgo) / followersWeekAgo) * 100).toFixed(2);
+            document.getElementById('inst-pct-7d').innerText = `${pct7d}%`;
+            document.getElementById('inst-pct-7d').className = pct7d >= 0 ? "pos" : "neg";
+
+            // --- CÁLCULO MENSAL (30 dias ou o máximo disponível) ---
+            const monthIndex = 0; // O primeiro item do array de 30 dias
+            const followersMonthAgo = history[monthIndex].followers - history[monthIndex].growth;
+            const pct30d = (((current - followersMonthAgo) / followersMonthAgo) * 100).toFixed(2);
+            document.getElementById('inst-pct-30d').innerText = `${pct30d}%`;
+            document.getElementById('inst-pct-30d').className = pct30d >= 0 ? "pos" : "neg";
+        }
+    } catch (error) {
+        console.error("Erro ao carregar dados:", error);
+    }
+}
+
+// Executa ao abrir a página
+carregarDados();
+</script>
+</body>
+</html>

@@ -4,17 +4,14 @@ from datetime import datetime
 
 # --- SEU MODEL (Estrutura de Dados) ---
 class InstagramProfileModel:
-    def __init__(self, username: str, follower_count: int):
+    def __init__(self, username: str, follower_count):
         self.username = username
-        self.follower_count = int(follower_count)
+        # CORREÇÃO: Se follower_count for None, define como 0 para não travar
+        self.follower_count = int(follower_count) if follower_count is not None else 0
 
     @property
     def current_milestone(self) -> int:
-        # A lógica matemática do marco de 1k (Ex: 320300 -> 320)
-        return self.follower_count // 3000
-    
-    def to_dict(self):
-        return {"username": self.username, "follower_count": self.follower_count}
+        return self.follower_count // 1000
 
 # --- SEU REPOSITORY (Acesso ao Banco) ---
 class MySqlRepository:
