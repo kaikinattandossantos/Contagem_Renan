@@ -51,6 +51,36 @@ def criar_tabelas():
     );
     """)
 
+
+    # 4. Tabelas YouTube
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS youtube_channels (
+        handle VARCHAR(100) PRIMARY KEY,
+        subscriber_count INT NOT NULL,
+        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS youtube_channel_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        handle VARCHAR(100) NOT NULL,
+        subscriber_count INT NOT NULL,
+        recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
+
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS youtube_videos (
+        video_id VARCHAR(32) PRIMARY KEY,
+        handle VARCHAR(100) NOT NULL,
+        title TEXT,
+        views_count INT DEFAULT 0,
+        published_at TIMESTAMP NULL,
+        url VARCHAR(255),
+        recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    );
+    """)
     conn.commit()
     conn.close()
     print("✅ SUCESSO! Todas as tabelas estão prontas.")
