@@ -60,7 +60,12 @@ def job():
         
         # 4. Executa a tarefa
         service.check_and_notify('renansantosmbl')
-        
+
+        # --- YOUTUBE (scraping clássico) ---
+        yt_handle = os.getenv('YOUTUBE_HANDLE', 'renansantosmbl')
+        yt_threshold = int(os.getenv('YT_VIRAL_VIEWS_THRESHOLD', '30000'))
+        service.check_youtube_and_notify(yt_handle, yt_threshold)
+ 
     except Exception as e:
         print(f"⚠️ Erro no Job: {e}")
 
