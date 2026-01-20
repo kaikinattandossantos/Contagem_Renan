@@ -13,6 +13,17 @@ class InstagramProfileModel:
     def current_milestone(self) -> int:
         return self.follower_count // 1000
 
+# --- YOUTUBE MODEL (Estrutura de Dados) ---
+class YouTubeChannelModel:
+    def __init__(self, handle: str, subscriber_count):
+        self.handle = handle.lstrip('@').strip()
+        self.subscriber_count = int(subscriber_count) if subscriber_count is not None else 0
+
+    @property
+    def current_milestone(self) -> int:
+        return self.subscriber_count // 1000
+
+
 # --- REPOSITORY (Acesso ao Banco) ---
 class MySqlRepository:
     def __init__(self):
@@ -107,3 +118,57 @@ class MySqlRepository:
         """
         self.cursor.execute(query, (username,))
         return self.cursor.fetchall()
+
+
+    # --- YOUTUBE (Canal + Vídeos) ---
+
+    def get_youtube_channel(self, handle: str):
+        handle = handle.lstrip('@').strip()
+        query = "SELECT handle, subscriber_count FROM youtube_channels WHERE handle = %s"
+        self.cursor.execute(query, (handle,))
+        result = self.cursor.fetchone()
+        if result:
+            return YouTubeChannelModel(result['handle'], result['subscriber_count'])
+        return None
+
+    def save_youtube_channel(self, model: YouTubeChannelModel):
+        handle = model.handle
+        query = """
+        INSERT INTO youtube_channels (handle, subscriber_count)
+        VALUES (%s, %s)
+        ON DUPLICATE KEY UPDATE subscriber_count = VALUES(subscriber_count)
+        """
+        self.cursor.execute(query, (handle, model.subscriber_count))
+
+        query_hist = "INSERT INTO youtube_channel_history (handle, subscriber_count) VALUES (%s, %s)"
+        self.cursor.execute(query_hist, (handle, model.subscriber_count))
+        self.conn.commit()
+
+    def get_youtube_video_views(self, video_id: str):
+        query = "SELECT views_count FROM youtube_videos WHERE video_id = %s"
+        self.cursor.execute(query, (video_id,))
+        result = self.cursor.fetchone()
+        if result:
+            return result['views_count']
+        return None
+
+    def save_youtube_videos(self, handle: str, videos_data: list[dict]):
+        handle = handle.lstrip('@').strip()
+        query = """
+        INSERT INTO youtube_videos (video_id, handle, title, views_count, published_at, url)
+        VALUES (%s, %s, %s, %s, %s, %s)
+        ON DUPLICATE KEY UPDATE views_count = VALUES(views_count)
+        """
+        data=[]
+        for v in videos_data:
+            data.append((
+                v.get('video_id'),
+                handle,
+                (v.get('title') or '')[:60000],
+                int(v.get('views_count') or 0),
+                v.get('published_at'),
+                v.get('url')
+            ))
+        if data:
+            self.cursor.executemany(query, data)
+            self.conn.commit()
